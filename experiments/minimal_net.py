@@ -49,6 +49,13 @@ simulation = sim_helpers.simple_simulation(
     },
 )
 
+nic_sim0 = simulation.find_sim(nic0)
+nic_sim0.mac = "00:1A:2B:3C:4D:5E"
+nic_sim0.log_file = "haram_0.init"
+nic_sim1 = simulation.find_sim(nic1)
+nic_sim1.mac = "00:1A:2B:3C:4D:5F"
+nic_sim1.log_file = "haram_1.init"
+
 instantiation = inst_helpers.simple_instantiation(simulation)
 fragment = inst.Fragment()
 fragment.add_simulators(*simulation.all_simulators())
