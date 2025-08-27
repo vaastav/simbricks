@@ -204,12 +204,16 @@ void Runner::DmaDo(DMAOp &op) {
 
 #ifdef DEBUG_NICBM
     uint8_t *tmp = (uint8_t *)op.data_;
-    sim_log::LogInfo(log_, "main_time = %lu: nicbm: dma write data: \n",
-                     main_time_);
+    std::string s;
     for (size_t d = 0; d < op.len_; d++) {
-      sim_log::LogInfo(log_, "%02X ", *tmp);
+      // Recreate %02X format
+      char buf[20];
+      std::sprintf(buf, "%02X ", *tmp); 
+      s += buf;
       tmp++;
     }
+    sim_log::LogInfo(log_, "main_time = %lu: nicbm: dma write data: %s\n",
+                     main_time_, s.c_str());
 #endif
     SimbricksPcieIfD2HOutSend(&nicif_.pcie, msg,
                               SIMBRICKS_PROTO_PCIE_D2H_MSG_WRITE);
