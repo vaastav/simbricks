@@ -56,6 +56,9 @@ nic_sim1 = simulation.find_sim(nic1)
 nic_sim1.mac = "00:1A:2B:3C:4D:5F"
 nic_sim1.log_file = "haram_1.init"
 
+switch0_sim = simulation.find_sim(switch0)
+switch0_sim.log_file = "switch0.log"
+
 instantiation = inst_helpers.simple_instantiation(simulation)
 fragment = inst.Fragment()
 fragment.add_simulators(*simulation.all_simulators())

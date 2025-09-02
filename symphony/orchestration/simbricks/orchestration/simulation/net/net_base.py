@@ -131,6 +131,7 @@ class SwitchNet(NetSim):
             executable=executable,
         )
         self.name = f"SwitchNet-{self._id}"
+        self.log_file: str | None = None
         self._relative_pcap_file_path: str | None = relative_pcap_filepath
 
     def add(self, switch_spec: sys_eth.EthSwitch):
@@ -142,12 +143,14 @@ class SwitchNet(NetSim):
     def toJSON(self) -> dict:
         json_obj = super().toJSON()
         json_obj["relative_pcap_file_path"] = self._relative_pcap_file_path
+        json_obj["log_file"] = self.log_file
         return json_obj
 
     @classmethod
     def fromJSON(cls, simulation: sim_base.Simulation, json_obj: dict) -> tpe.Self:
         instance = super().fromJSON(simulation, json_obj)
         instance._relative_pcap_file_path = utils_base.get_json_attr_top(json_obj, "relative_pcap_file_path") 
+        instance.log_file = utils_base.get_json_attr_top(json_obj, "log_file")
         return instance
 
     def run_cmd(self, inst: inst_base.Instantiation) -> str:
@@ -167,6 +170,9 @@ class SwitchNet(NetSim):
                 relative_path=self._relative_pcap_file_path
             )
             cmd += " -p " + pcap_file
+
+        if self.log_file is not None:
+            cmd += " -f " + self.log_file
 
         sockets = self._get_socks_by_all_comp(inst=inst)
         listen, connect = sim_base.Simulator.split_sockets_by_type(sockets)

@@ -37,12 +37,15 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <fstream>
 
 #include <simbricks/base/cxxatomicfix.h>
 extern "C" {
 #include <simbricks/network/if.h>
 #include <simbricks/nicif/nicif.h>
 };
+
+#include "lib/utils/log.h"
 
 // #define NETSWITCH_DEBUG
 #define NETSWITCH_STAT
@@ -61,6 +64,8 @@ static uint64_t d2n_poll_sync = 0;
 static uint64_t s_d2n_poll_total = 0;
 static uint64_t s_d2n_poll_suc = 0;
 static uint64_t s_d2n_poll_sync = 0;
+
+static uint64_t transient_id = 0;
 
 static int stat_flag = 0;
 #endif
@@ -101,6 +106,7 @@ class NetPort {
     kRxPollSuccess = 0,
     kRxPollFail = 1,
     kRxPollSync = 2,
+    kRxPollTerminate = 3,
   };
   struct SimbricksNetIf netif_;
 
@@ -179,6 +185,8 @@ class NetPort {
       return kRxPollSuccess;
     } else if (type == SIMBRICKS_PROTO_MSG_TYPE_SYNC) {
       return kRxPollSync;
+    } else if (type == SIMBRICKS_PROTO_MSG_TYPE_TERMINATE) {
+      return kRxPollTerminate;
     } else {
       fprintf(stderr, "switch_pkt: unsupported type=%u\n", type);
       abort();
@@ -283,6 +291,8 @@ static const uint8_t bcast[6] = {0xFF};
 static const MAC bcast_addr(bcast);
 static std::vector<NetPort *> ports;
 static std::unordered_map<MAC, int> mac_table;
+sim_log::LogPtT log_ = sim_log::Log::createLog();
+std::ofstream g_log;
 
 static void sigint_handler(int dummy) {
   exiting = 1;
@@ -403,6 +413,10 @@ static void switch_pkt(NetPort &port, size_t iport) {
       s_d2n_poll_sync += 1;
     }
 #endif
+  } else if (poll == NetPort::kRxPollTerminate){
+    // Mark the process to end
+    exiting = 1;
+    fprintf(stderr, "switch_pkt: Received terminate message\n");
   } else {
     fprintf(stderr, "switch_pkt: unsupported poll result=%u\n", poll);
     abort();
@@ -419,7 +433,7 @@ int main(int argc, char *argv[]) {
   SimbricksNetIfDefaultParams(&netParams);
 
   // Parse command line argument
-  while ((c = getopt(argc, argv, "s:h:uS:E:p:")) != -1 && !bad_option) {
+  while ((c = getopt(argc, argv, "s:h:uS:E:p:f:")) != -1 && !bad_option) {
     switch (c) {
       case 's': {
         NetPort *port = new NetPort(optarg, sync_eth);
@@ -447,6 +461,19 @@ int main(int argc, char *argv[]) {
         netParams.link_latency = strtoull(optarg, NULL, 0) * 1000ULL;
         break;
 
+      case 'f':
+        //log_ = sim_log::Log::createLog(optarg);
+        //sim_log::LogInfo(log_, "Correctly parsed file argument %s", optarg);
+        //sim_log::FlushLog();
+        g_log.open(optarg, std::ios::out);
+        if (g_log.is_open()) {
+          g_log << "Correctly parsed file argument " << optarg << "\n";
+          fprintf(stdout, "Successfully opened log file for writing\n");
+        } else {
+          fprintf(stdout, "Failed to open log file for writing\n");
+        }
+        break;
+
       case 'p':
         pc = pcap_open_dead_with_tstamp_precision(DLT_EN10MB, 65535,
                                                   PCAP_TSTAMP_PRECISION_NANO);
@@ -468,7 +495,7 @@ int main(int argc, char *argv[]) {
   if (ports.empty() || bad_option) {
     fprintf(stderr,
             "Usage: net_switch [-S SYNC-PERIOD] [-E ETH-LATENCY] "
-            "-s SOCKET-A [-s SOCKET-B ...]\n");
+            "-s SOCKET-A [-s SOCKET-B ...] [-f /path/to/logfile]\n");
     return EXIT_FAILURE;
   }
 
@@ -522,6 +549,9 @@ int main(int argc, char *argv[]) {
   fprintf(stderr, "%65s: %22lu  sync_rate: %f\n", "s_d2n_poll_sync",
           s_d2n_poll_sync, (double)s_d2n_poll_sync / s_d2n_poll_suc);
 #endif
+
+  //sim_log::FlushLog();
+
 
   return 0;
 }
