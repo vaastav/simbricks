@@ -85,6 +85,19 @@ struct MAC {
     }
     return true;
   }
+
+  std::string repr() {
+    std::string res;
+    for (int i = 0; i < 6; i++) {
+      char buffer[3];
+      sprintf(buffer, "%02x", data[i]);
+      res += buffer;
+      if (i != 5) {
+        res += ":";
+      }
+    }
+    return res;
+  }
 };
 namespace std {
 template <>
@@ -291,8 +304,8 @@ static const uint8_t bcast[6] = {0xFF};
 static const MAC bcast_addr(bcast);
 static std::vector<NetPort *> ports;
 static std::unordered_map<MAC, int> mac_table;
-sim_log::LogPtT log_ = sim_log::Log::createLog();
-std::ofstream g_log;
+static sim_log::LogPtT log_ = sim_log::Log::createLog();
+static bool is_logging = false;
 
 static void sigint_handler(int dummy) {
   exiting = 1;
@@ -357,8 +370,16 @@ static void forward_pkt(const void *pkt_data, size_t pkt_len, size_t port_id,
   }
 #endif
 
-  if (!dest_port.TxPacket(pkt_data, pkt_len, cur_ts))
+  if (!dest_port.TxPacket(pkt_data, pkt_len, cur_ts)) {
     fprintf(stderr, "forward_pkt: dropping packet on port %zu\n", port_id);
+    if (is_logging) {
+      sim_log::LogInfo(log_, "main_time=%lu Packet Drop: id=%lu e_port=%zu i_port=%zu\n", cur_ts, transient_id, port_id, iport_id);
+    }
+  } else {
+    if (is_logging) {
+      sim_log::LogInfo(log_, "main_time=%lu Packet Transmit: id=%lu e_port=%zu i_port=%zu\n", cur_ts, transient_id, port_id, iport_id);
+    }
+  }
 }
 
 static void switch_pkt(NetPort &port, size_t iport) {
@@ -385,8 +406,13 @@ static void switch_pkt(NetPort &port, size_t iport) {
 #endif
 
   if (poll == NetPort::kRxPollSuccess) {
+    // Increment the transient id 
+    ++transient_id;
     // Get MAC addresses
     MAC dst((const uint8_t *)pkt_data), src((const uint8_t *)pkt_data + 6);
+    if (is_logging) {
+      sim_log::LogInfo(log_, "main_time=%lu Packet Receive: id=%lu port=%zu src=%s dst=%s len=%zu\n", cur_ts, transient_id, iport, src.repr().c_str(), dst.repr().c_str(), pkt_len);
+    }
     // MAC learning
     if (!(src == bcast_addr)) {
       mac_table[src] = iport;
@@ -462,16 +488,8 @@ int main(int argc, char *argv[]) {
         break;
 
       case 'f':
-        //log_ = sim_log::Log::createLog(optarg);
-        //sim_log::LogInfo(log_, "Correctly parsed file argument %s", optarg);
-        //sim_log::FlushLog();
-        g_log.open(optarg, std::ios::out);
-        if (g_log.is_open()) {
-          g_log << "Correctly parsed file argument " << optarg << "\n";
-          fprintf(stdout, "Successfully opened log file for writing\n");
-        } else {
-          fprintf(stdout, "Failed to open log file for writing\n");
-        }
+        log_ = sim_log::Log::createLog(optarg);
+        is_logging = true;
         break;
 
       case 'p':
@@ -550,7 +568,7 @@ int main(int argc, char *argv[]) {
           s_d2n_poll_sync, (double)s_d2n_poll_sync / s_d2n_poll_suc);
 #endif
 
-  //sim_log::FlushLog();
+  sim_log::FlushLog();
 
 
   return 0;
