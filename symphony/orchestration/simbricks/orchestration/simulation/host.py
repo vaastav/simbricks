@@ -106,6 +106,7 @@ class Gem5Sim(HostSim):
         self.extra_config_args: list[str] = []
         self._variant: str = "fast"
         self._sys_clock: str = "1GHz"  # TODO: move to system module
+        self.log_file : str | None = None
 
     def supports_checkpointing(self) -> bool:
         return True
@@ -127,6 +128,7 @@ class Gem5Sim(HostSim):
         json_obj["extra_config_args"] = self.extra_config_args
         json_obj["_variant"] = self._variant
         json_obj["_sys_clock"] = self._sys_clock
+        json_obj["log_file"] = self.log_file
         return json_obj
 
     @classmethod
@@ -142,6 +144,7 @@ class Gem5Sim(HostSim):
         )
         instance._variant = utils_base.get_json_attr_top(json_obj, "_variant")
         instance._sys_clock = utils_base.get_json_attr_top(json_obj, "_sys_clock")
+        instance.log_file = utils_base.get_json_attr_top(json_obj, "log_file")
         return instance
 
     async def copy_disk_image(
@@ -171,6 +174,8 @@ class Gem5Sim(HostSim):
 
         cmd = f"{inst.env.repo_base(f'{self._executable}.{self._variant}')} --outdir={inst.env.get_simulator_output_dir(sim=self)} "
         cmd += " ".join(self.extra_main_args)
+        if self.log_file is not None:
+            cmd += f" --debug-file={self.log_file} --debug-flags=SimBricksAll,SyscallAll,EthernetAll,PciDevice,PciHost"
         cmd += (
             f" {inst.env.repo_base('sims/external/gem5/configs/simbricks/simbricks.py')} --caches --l2cache "
             "--l1d_size=32kB --l1i_size=32kB --l2_size=32MB "
@@ -272,6 +277,7 @@ class QemuSim(HostSim):
         )
         self.name = f"QemuSim-{self._id}"
         self._qemu_img_exec: str = "sims/external/qemu/build/qemu-img"
+        self.log_file: str | None = None
 
     def resreq_cores(self) -> int:
         return 1
@@ -286,12 +292,14 @@ class QemuSim(HostSim):
         json_obj = super().toJSON()
         # disks is created upon invocation of "prepare", hence we do not need to serialize it
         json_obj["qemu_img_exec"] = self._qemu_img_exec
+        json_obj["log_file"] = self.log_file
         return json_obj
 
     @classmethod
     def fromJSON(cls, simulation: sim_base.Simulation, json_obj: dict) -> tpe.Self:
         instance = super().fromJSON(simulation, json_obj)
         instance._qemu_img_exec = utils_base.get_json_attr_top(json_obj, "qemu_img_exec")
+        instance.log_file = utils_base.get_json_attr_top(json_obj, "log_file")
         return instance
 
     async def _make_qcow_copy(
@@ -344,6 +352,9 @@ class QemuSim(HostSim):
             "-cpu Skylake-Server -display none -nic none "
             f"-kernel {inst.env.repo_base('images/bzImage')} "
         )
+
+        if self.log_file is not None:
+            cmd += f" -D {self.log_file} "
 
         full_sys_hosts = self.filter_components_by_type(ty=sys_host.BaseLinuxHost)
         if len(full_sys_hosts) != 1:
