@@ -5,7 +5,7 @@ from simbricks.orchestration.helpers import instantiation as inst_helpers
 from simbricks.orchestration.helpers import simulation as sim_helpers
 from simbricks.utils import base as utils_base
 
-synchronized = True
+synchronized = False
 
 sys = system.System()
 
@@ -46,7 +46,7 @@ host1.add_app(system.Sleep(host1, infinite=True))
 simulation = sim_helpers.simple_simulation(
     sys,
     compmap={
-        system.FullSystemHost: sim.QemuSim,
+        system.FullSystemHost: sim.Gem5Sim,
         system.IntelI40eNIC: sim.I40eNicSim,
         system.EthSwitch: sim.SwitchNet,
     },
