@@ -3,6 +3,9 @@ from simbricks.orchestration import simulation as sim
 from simbricks.orchestration import system
 from simbricks.orchestration.helpers import instantiation as inst_helpers
 from simbricks.orchestration.helpers import simulation as sim_helpers
+from simbricks.utils import base as utils_base
+
+synchronized = True
 
 sys = system.System()
 
@@ -49,15 +52,27 @@ simulation = sim_helpers.simple_simulation(
     },
 )
 
+if synchronized:
+    simulation.enable_synchronization(amount=500, ratio=utils_base.Time.Nanoseconds)
+
 nic_sim0 = simulation.find_sim(nic0)
 nic_sim0.mac = "00:1A:2B:3C:4D:5E"
-nic_sim0.log_file = "haram_0.init"
+nic_sim0.log_file = "nic0.log"
 nic_sim1 = simulation.find_sim(nic1)
 nic_sim1.mac = "00:1A:2B:3C:4D:5F"
-nic_sim1.log_file = "haram_1.init"
+nic_sim1.log_file = "nic1.log"
 
 switch0_sim = simulation.find_sim(switch0)
 switch0_sim.log_file = "switch0.log"
+
+host_sim0 = simulation.find_sim(host0)
+host_sim1 = simulation.find_sim(host1)
+host_sim0.log_file = "host0.log"
+host_sim1.log_file = "host1.log"
+if isinstance(host_sim0, sim.Gem5Sim):
+    host_sim0._variant = "opt"
+if isinstance(host_sim1, sim.Gem5Sim):
+    host_sim1._variant = "opt"
 
 instantiation = inst_helpers.simple_instantiation(simulation)
 fragment = inst.Fragment()
