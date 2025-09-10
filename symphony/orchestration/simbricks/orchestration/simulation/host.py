@@ -354,7 +354,7 @@ class QemuSim(HostSim):
         )
 
         if self.log_file is not None:
-            # TODO: Add event tracing flags with -d 
+            # TODO: Add event tracing flags with -d https://github.com/qemu/qemu/blob/master/util/log.c
             cmd += f" -D {self.log_file} "
 
         full_sys_hosts = self.filter_components_by_type(ty=sys_host.BaseLinuxHost)

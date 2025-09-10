@@ -4,8 +4,9 @@ from simbricks.orchestration import system
 from simbricks.orchestration.helpers import instantiation as inst_helpers
 from simbricks.orchestration.helpers import simulation as sim_helpers
 from simbricks.utils import base as utils_base
+import json
 
-synchronized = False
+synchronized = True
 
 sys = system.System()
 
@@ -80,3 +81,10 @@ fragment.add_simulators(*simulation.all_simulators())
 instantiation.fragments = [fragment]
 
 instantiations = [instantiation]
+
+with open('sim_topology.json', 'w+') as outf:
+    topo = {}
+    topo['system'] = sys.toJSON()
+    topo['simulation'] = simulation.toJSON()
+    topo_str = json.dumps(topo, indent=4)
+    outf.write(topo_str)
