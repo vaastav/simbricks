@@ -154,6 +154,10 @@ for ns3_h in ns3_hosts:
 
 net_inst.log_file = "ns3_net.log"
 net_inst._executable = "sims/external/ns-3/simbricks-run-log.sh"
+net_inst.logging.add_logging("SimbricksNetDevice", simulation.ns3_comps.NS3LoggingLevel.ALL)
+net_inst.logging.add_logging("BridgeNetDevice", simulation.ns3_comps.NS3LoggingLevel.ALL)
+net_inst.logging.add_logging("E2ENetwork", simulation.ns3_comps.NS3LoggingLevel.ALL)
+net_inst.logging.add_logging("E2ETopology", simulation.ns3_comps.NS3LoggingLevel.ALL)
 print(net_inst._executable)
 
 if synchronized:
