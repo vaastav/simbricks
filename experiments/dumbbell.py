@@ -152,7 +152,9 @@ net_inst.add(switch_2)
 for ns3_h in ns3_hosts:
     net_inst.add(ns3_h)
 
-print(net_inst.components())
+net_inst.log_file = "ns3_net.log"
+net_inst._executable = "sims/external/ns-3/simbricks-run-log.sh"
+print(net_inst._executable)
 
 if synchronized:
     sim.enable_synchronization(amount=500, ratio=utils_base.Time.Nanoseconds)

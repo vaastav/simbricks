@@ -365,6 +365,7 @@ class NS3Net(SimpleNS3Sim):
         self.use_file = True
         self.global_conf = ns3_comps.NS3GlobalConfig()
         self.logging = ns3_comps.NS3Logging()
+        self.log_file = ""
 
     def add(self, comp: sys_base.Component):
         super().add(comp)
@@ -374,6 +375,7 @@ class NS3Net(SimpleNS3Sim):
         json_obj["use_file"] = self.use_file
         json_obj["global_conf"] = self.global_conf.toJSON()
         json_obj["logging"] = self.logging.toJSON()
+        json_obj["log_file"] = self.log_file
         return json_obj
 
     @classmethod
@@ -386,6 +388,7 @@ class NS3Net(SimpleNS3Sim):
         instance.logging = ns3_comps.NS3Logging.fromJSON(
             utils_base.get_json_attr_top(json_obj, "logging")
         )
+        instance.log_file = utils_base.get_json_attr_top(json_obj, "log_file")
         return instance
 
     def supported_socket_types(
@@ -396,6 +399,11 @@ class NS3Net(SimpleNS3Sim):
 
     def run_cmd(self, inst: inst_base.Instantiation) -> str:
         cmd = super().run_cmd(inst=inst)
+        if self.log_file and self._executable == "sims/external/ns-3/simbricks-run-log.sh":
+            sim_out = inst.env.get_simulator_output_dir(self)
+            pathlib.Path(sim_out).mkdir(parents=True, exist_ok=True)
+            file_path = utils_file.join_paths(sim_out, f"{self.log_file}")
+            cmd += f" {file_path} "
 
         ns3_components: dict[sys_base.Component, ns3_comps.NS3Component] = {}
         ns3c: set[ns3_comps.NS3Component] = set()
@@ -499,4 +507,5 @@ class NS3Net(SimpleNS3Sim):
         else:
             cmd += params_str
 
+        print("Running the ns3 command: ", cmd)
         return cmd

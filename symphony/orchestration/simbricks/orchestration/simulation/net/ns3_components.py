@@ -96,6 +96,7 @@ class NS3LoggingLevel(Enum):
     PREFIX_NODE = 'prefix_node'
     PREFIX_LEVEL = 'prefix_level'
     PREFIX_ALL = 'prefix_all'
+    TIME = 'time'
 
     def __str__(self):
         return self.value
