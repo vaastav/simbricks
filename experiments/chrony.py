@@ -173,9 +173,13 @@ for ns3_h in ns3_hosts:
     net_inst.add(ns3_h)
 
 net_inst.logging.add_logging("SimbricksNetDevice", simulation.ns3_comps.NS3LoggingLevel.ALL)
+net_inst.logging.add_logging("SimbricksNetDevice", simulation.ns3_comps.NS3LoggingLevel.PREFIX_ALL)
 net_inst.logging.add_logging("BridgeNetDevice", simulation.ns3_comps.NS3LoggingLevel.ALL)
+net_inst.logging.add_logging("BridgeNetDevice", simulation.ns3_comps.NS3LoggingLevel.PREFIX_ALL)
 net_inst.logging.add_logging("E2ENetwork", simulation.ns3_comps.NS3LoggingLevel.ALL)
+net_inst.logging.add_logging("E2ENetwork", simulation.ns3_comps.NS3LoggingLevel.PREFIX_ALL)
 net_inst.logging.add_logging("E2ETopology", simulation.ns3_comps.NS3LoggingLevel.ALL)
+net_inst.logging.add_logging("E2ETopology", simulation.ns3_comps.NS3LoggingLevel.PREFIX_ALL)
 # Set the ns3 log file!
 net_inst.log_file = "ns3_net.log"
 net_inst._executable = "sims/external/ns-3/simbricks-run-log.sh"
