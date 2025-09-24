@@ -31,11 +31,12 @@ NOPAXOS_IMAGE := $(d)output-nopaxos/nopaxos
 MTCP_IMAGE := $(d)output-mtcp/mtcp
 TAS_IMAGE := $(d)output-tas/tas
 COMPRESSED_IMAGES ?= false
+CHRONY_PTP_IMAGE :=$(d)output-timesync/timesync
 
 IMAGES := $(BASE_IMAGE) $(NOPAXOS_IMAGE) $(MEMCACHED_IMAGE)
 RAW_IMAGES := $(addsuffix .raw,$(IMAGES))
 
-IMAGES_MIN := $(BASE_IMAGE)
+IMAGES_MIN := $(BASE_IMAGE) $(CHRONY_PTP_IMAGE)
 RAW_IMAGES_MIN := $(addsuffix .raw,$(IMAGES_MIN))
 
 img_dir := $(d)
@@ -124,6 +125,14 @@ $(TAS_IMAGE): $(packer) $(QEMU) $(BASE_IMAGE) \
 	rm -rf $(dir $@)
 	cd $(img_dir) && ./packer-wrap.sh base tas extended-image.pkr.hcl \
 	    $(COMPRESSED_IMAGES)
+	touch $@
+
+$(CHRONY_PTP_IMAGE): $(packer) $(QEMU) $(BASE_IMAGE) \
+	$(addprefix $(d), extended-image.pkr.hcl scripts/install-timesync.sh \
+	  scripts/cleanup.sh)
+	rm -rf $(dir $@)
+	cd $(img_dir) && ./packer-wrap.sh base timesync extended-image.pkr.hcl \
+		$(COMPRESSED_IMAGES)
 	touch $@
 
 $(packer):
