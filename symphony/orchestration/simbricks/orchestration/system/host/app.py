@@ -338,3 +338,237 @@ class IperfUDPClient(BaseLinuxApplication):
         instance.server_ip = utils_base.get_json_attr_top(json_obj, "server_ip")
         instance.rate = utils_base.get_json_attr_top(json_obj, "rate")
         return instance
+
+class PTPServer(BaseLinuxApplication):
+
+    def __init__(self, h: sys_host.LinuxHost) -> None:
+        super().__init__(h)
+
+    def toJSON(self) -> dict:
+        return super().toJSON()
+
+    @classmethod
+    def fromJSON(cls, system: sys_base.System, json_obj: dict) -> tpe.Self:
+        return super().fromJSON(system, json_obj)
+
+    def prepare_pre_cp(self, inst: inst_base.Instantiation) -> list[str]:
+        cmds =super().prepare_pre_cp(inst)
+        # lower clock class -> higher priority to ensure this serve
+        # ends up grand master
+        cmds.append('sed -i '
+                    '-e "s/clockClass\t*[0-9-]*/clockClass\t128/g" '
+                    '-e "s/logAnnounceInterval\t*[0-9-]*/logAnnounceInterval\t-2/g" '
+                    '-e "s/logSyncInterval\t*[0-9-]*/logSyncInterval\t-5/g" '
+                    '-e "s/logMinDelayReqInterval\t*[0-9-]*/logMinDelayReqInterval\t-5/g" '
+                    '-e "s/logMinPdelayReqInterval\t*[0-9-]*/logMinPdelayReqInterval\t-5/g" '
+                    '-e "s/operLogSyncInterval[\t ]*[0-9-]*/operLogSyncInterval\t-5/g" '
+                    '-e "s/operLogPdelayReqInterval[\t ]*[0-9-]*/operLogPdelayReqInterval\t-5/g" '
+                    '/etc/linuxptp/ptp4l.conf')
+        cmds.append('cat /etc/linuxptp/ptp4l.conf')
+
+        # m5 and sys time query
+        cmds = cmds + [f"""
+echo "for i in {{0..60}}" >> sys-query.sh
+echo "do" >> sys-query.sh
+echo "    date +%s%N" >> sys-query.sh
+echo "    m5 dumpstats" >> sys-query.sh
+echo "    sleep 60" >> sys-query.sh
+echo "done" >> sys-query.sh
+chmod +x sys-query.sh
+"""]
+        return cmds
+
+    def config_files(self, inst: inst_base.Instantiation):
+        cfg = (
+            f'bindcmdaddress 127.0.0.1\n'
+            f'allow 10.0.0.0/8\n'
+            f'driftfile /tmp/chrony-drift\n'
+            f'local stratum 1\n'
+            )
+        m = {'chrony.conf': self.strfile(cfg)}
+        return m
+
+    def run_cmds(self, inst: inst_base.Instantiation) -> list[str]:
+        return [
+            # initially set phc to system time, so we have a sane starting
+            # point
+            f'phc_ctl /dev/ptp0 set &',
+            f'ptp4l -m -q -f /etc/linuxptp/ptp4l.conf -i eth0 &',
+            f"""
+./sys-query.sh &
+pid=$!
+wait $pid
+"""
+        ]
+
+class ChronyServer(BaseLinuxApplication):
+
+    def __init__(self, h: sys_host.LinuxHost) -> None:
+        super().__init__(h)
+        self.loglevel = 0
+        self.nic_timestamping = False
+
+    def toJSON(self) -> dict:
+        json_obj = super().toJSON()
+        json_obj["loglevel"] = self.loglevel
+        json_obj["nic_timestamping"] = self.nic_timestamping
+        return json_obj
+
+    @classmethod
+    def fromJSON(cls, system: sys_base.System, json_obj: dict) -> tpe.Self:
+        instance = super().fromJSON(system, json_obj)
+        instance.loglevel = utils_base.get_json_attr_top(json_obj, "loglevel")
+        instance.nic_timestamping = utils_base.get_json_attr_top(json_obj, "nic_timestamping")
+        return instance
+
+    def prepare_pre_cp(self, inst: inst_base.Instantiation) -> list[str]:
+        cmds = super().prepare_pre_cp(inst)
+        # m5 and sys time query
+        cmds = cmds + [f"""
+echo "for i in {{0..60}}" >> sys-query.sh
+echo "do" >> sys-query.sh
+echo "  date +%s%N" >> sys-query.sh
+echo "  m5 dumpstats" >> sys-query.sh
+echo "  sleep 60" >> sys-query.sh
+echo "done" >> sys-query.sh
+chmod +x sys-query.sh
+"""     
+        ]
+        # chrony query
+        cmds = cmds + [f"""
+echo "for i in {{0..60}}" >> chrony-query.sh
+echo "do" >> chrony-query.sh
+echo "  chronyc -n tracking" >> chrony-query.sh
+echo "  sleep 60" >> chrony-query.sh
+echo "done" >> chrony-query.sh
+chmod +x chrony-query.sh
+"""     
+        ]
+
+        return cmds
+
+    def config_files(self, inst: inst_base.Instantiation) -> dict[str, tp.IO]:
+        cfg = (
+            f'bindcmdaddress 127.0.0.1\n'
+            f'allow 10.0.0.0/8\n'
+            f'driftfile /tmp/chrony-drift\n'
+            f'local stratum 1\n'
+            )
+        if self.nic_timestamping:
+            cfg += 'hwtimestamp * rxfilter ptp\n'
+            cfg += 'ptpport 319\n'
+        m = {'chrony.conf': self.strfile(cfg)}
+        return m
+
+    def run_cmds(self, inst: inst_base.Instantiation) -> list[str]:
+        return [
+            # initially set phc to system time, so we have a sane starting
+            # point
+            f'phc_ctl /dev/ptp0 set &',
+            f'ptp4l -m -q -f /etc/linuxptp/ptp4l.conf -i eth0 &',
+            f"""
+./sys-query.sh &
+pid=$!
+wait $pid
+"""
+        ]
+
+class ChronyClient(BaseLinuxApplication):
+    def __init__(self, h: sys_host.LinuxHost) -> None:
+        super().__init__(h)
+        self.chrony_loglevel = 0
+        self.ntp_server = '10.0.0.1'
+        self.nic_timestamping = False
+        self.ptp = False
+
+    def toJSON(self) -> dict:
+        json_obj = super().toJSON()
+        json_obj["loglevel"] = self.chrony_loglevel
+        json_obj["nic_timestamping"] = self.nic_timestamping
+        json_obj["ntp_server"] = self.ntp_server
+        json_obj["ptp"] = self.ptp
+        return json_obj
+
+    @classmethod
+    def fromJSON(cls, system: sys_base.System, json_obj: dict) -> tpe.Self:
+        instance = super().fromJSON(system, json_obj)
+        instance.chrony_loglevel = utils_base.get_json_attr_top(json_obj, "loglevel")
+        instance.nic_timestamping = utils_base.get_json_attr_top(json_obj, "nic_timestamping")
+        instance.ntp_server = utils_base.get_json_attr_top(json_obj, "ntp_server")
+        instance.ptp = utils_base.get_json_attr_top(json_obj, "ptp")
+        return instance
+
+    def prepare_pre_cp(self, inst: inst_base.Instantiation) -> list[str]:
+        cmds = super().prepare_pre_cp(inst)
+        if self.ptp:
+            cmds.append('sed -i '
+                        '-e "s/logAnnounceInterval\t*[0-9-]*/logAnnounceInterval\t-2/g" '
+                        '-e "s/logSyncInterval\t*[0-9-]*/logSyncInterval\t-5/g" '
+                        '-e "s/logMinDelayReqInterval\t*[0-9-]*/logMinDelayReqInterval\t-5/g" '
+                        '-e "s/logMinPdelayReqInterval\t*[0-9-]*/logMinPdelayReqInterval\t-5/g" '
+                        '-e "s/operLogSyncInterval[\t ]*[0-9-]*/operLogSyncInterval\t-5/g" '
+                        '-e "s/operLogPdelayReqInterval[\t ]*[0-9-]*/operLogPdelayReqInterval\t-5/g" '
+                        '/etc/linuxptp/ptp4l.conf')
+            cmds.append('cat /etc/linuxptp/ptp4l.conf')
+
+        # m5 and sys time query
+        cmds = cmds + [f"""
+echo "for i in {{0..60}}" >> sys-query.sh
+echo "do" >> sys-query.sh
+echo "  date +%s%N" >> sys-query.sh
+echo "  m5 dumpstats" >> sys-query.sh
+echo "  sleep 60" >> sys-query.sh
+echo "done" >> sys-query.sh
+chmod +x sys-query.sh
+"""
+        ]
+        # chrony query
+        cmds = cmds + [f"""
+echo "for i in {{0..60}}" >> chrony-query.sh
+echo "do" >> chrony-query.sh
+echo "  chronyc -n tracking" >> chrony-query.sh
+echo "  sleep 60" >> chrony-query.sh
+echo "done" >> chrony-query.sh
+chmod +x chrony-query.sh
+"""
+        ]
+        return cmds
+
+    def config_files(self, inst: inst_base.Instantiation) -> dict[str, tp.IO]:
+        if self.ptp:
+            cfg = (
+                f'bindcmdaddress 127.0.0.1\n'
+                f'refclock PHC /dev/ptp0 poll -2 dpoll -3\n'
+                f'driftfile /tmp/chrony-drift\n'
+                f'makestep 0.01 3\n'
+                )
+        else:
+            ptpport = ''
+            if self.nic_timestamping:
+                ptpport = 'port 319'
+            cfg = (
+                f'bindcmdaddress 127.0.0.1\n'
+                f'server {self.ntp_server} iburst minpoll -6 maxpoll -1 xleave {ptpport}\n'
+                f'driftfile /tmp/chrony-drift\n'
+                f'makestep 0.01 3\n'
+                )
+            if self.nic_timestamping:
+                cfg += 'hwtimestamp * rxfilter ptp\n'
+                cfg += 'ptpport 319\n'
+        m = {'chrony.conf': self.strfile(cfg)}
+        return m
+
+    def run_cmds(self, inst: inst_base.Instantiation) -> list[str]:
+        cmds = [f'chronyd -d -d -f chrony.conf -L {self.chrony_loglevel} &']
+        if self.ptp:
+            cmds = [f'ptp4l -m -q -f /etc/linuxptp/ptp4l.conf -i eth0 &'] + cmds
+
+        cmds = cmds + [f"""
+./chrony-query.sh &
+./sys-query.sh &
+pid=$!
+wait $pid
+"""
+        ]
+
+        return cmds

@@ -81,12 +81,15 @@ host1.connect_pcie_dev(nic1)
 nics.append(nic1)
 
 # Client app
-client_app = system.NetperfClient(h=host0, server_ip=nic1._ip)
-client_app.wait = True
+client_app = system.ChronyClient(h=host0)
+client_app.ntp_server = '10.0.0.2'
+client_app.nic_timestamping = False
+client_app.ptp = False
 host0.add_app(client_app)
 
 # Server app
-server_app = system.NetperfServer(h=host1)
+server_app = system.ChronyServer(h=host1)
+server_app.nic_timestamping = False
 host1.add_app(server_app)
 
 # create switches and connect them to NICs
