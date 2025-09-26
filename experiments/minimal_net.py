@@ -8,6 +8,10 @@ import json
 
 synchronized = True
 
+nic_logging = True
+ns3_logging = False
+host_logging = False
+
 sys = system.System()
 
 # create disk images
@@ -44,36 +48,57 @@ ping_client_app.wait = True
 host0.add_app(ping_client_app)
 host1.add_app(system.Sleep(host1, infinite=True))
 
-simulation = sim_helpers.simple_simulation(
-    sys,
-    compmap={
-        system.FullSystemHost: sim.Gem5Sim,
-        system.IntelI40eNIC: sim.I40eNicSim,
-        system.EthSwitch: sim.SwitchNet,
-    },
-)
+# simulation = sim_helpers.simple_simulation(
+#     sys,
+#     compmap={
+#         system.FullSystemHost: sim.Gem5Sim,
+#         system.IntelI40eNIC: sim.I40eNicSim,
+#     },
+# )
+simulation = sim.Simulation(name="minimal_net_full_logging", system=sys)
+
+net_inst = sim.NS3Net(simulation)
+net_inst.add(switch0)
+
+host_sim0 = sim.Gem5Sim(simulation)
+host_sim0.add(host0)
+host_sim1 = sim.Gem5Sim(simulation)
+host_sim1.add(host1)
+
+nic_sim0 = sim.I40eNicSim(simulation)
+nic_sim0.add(nic0)
+nic_sim1 = sim.I40eNicSim(simulation)
+nic_sim1.add(nic1)
+
+if nic_logging:
+    nic_sim0.mac = "00:1A:2B:3C:4D:5E"
+    nic_sim0.log_file = "nic0.log"
+    nic_sim1.mac = "00:1A:2B:3C:4D:5F"
+    nic_sim1.log_file = "nic1.log"
+
+if host_logging:
+    host_sim0.log_file = "host0.log"
+    host_sim1.log_file = "host1.log"
+    if isinstance(host_sim0, sim.Gem5Sim):
+        host_sim0._variant = "opt"
+    if isinstance(host_sim1, sim.Gem5Sim):
+        host_sim1._variant = "opt"
+
+
+if ns3_logging:
+    net_inst.log_file = "ns3_net.log"
+    net_inst._executable = "sims/external/ns-3/simbricks-run-log.sh"
+    net_inst.logging.add_logging("SimbricksNetDevice", sim.ns3_comps.NS3LoggingLevel.ALL)
+    net_inst.logging.add_logging("SimbricksNetDevice", sim.ns3_comps.NS3LoggingLevel.PREFIX_ALL)
+    net_inst.logging.add_logging("BridgeNetDevice", sim.ns3_comps.NS3LoggingLevel.ALL)
+    net_inst.logging.add_logging("BridgeNetDevice", sim.ns3_comps.NS3LoggingLevel.PREFIX_ALL)
+    net_inst.logging.add_logging("E2ENetwork", sim.ns3_comps.NS3LoggingLevel.ALL)
+    net_inst.logging.add_logging("E2ENetwork", sim.ns3_comps.NS3LoggingLevel.PREFIX_ALL)
+    net_inst.logging.add_logging("E2ETopology", sim.ns3_comps.NS3LoggingLevel.ALL)
+    net_inst.logging.add_logging("E2ETopology", sim.ns3_comps.NS3LoggingLevel.PREFIX_ALL)
 
 if synchronized:
     simulation.enable_synchronization(amount=500, ratio=utils_base.Time.Nanoseconds)
-
-nic_sim0 = simulation.find_sim(nic0)
-nic_sim0.mac = "00:1A:2B:3C:4D:5E"
-nic_sim0.log_file = "nic0.log"
-nic_sim1 = simulation.find_sim(nic1)
-nic_sim1.mac = "00:1A:2B:3C:4D:5F"
-nic_sim1.log_file = "nic1.log"
-
-switch0_sim = simulation.find_sim(switch0)
-switch0_sim.log_file = "switch0.log"
-
-host_sim0 = simulation.find_sim(host0)
-host_sim1 = simulation.find_sim(host1)
-host_sim0.log_file = "host0.log"
-host_sim1.log_file = "host1.log"
-if isinstance(host_sim0, sim.Gem5Sim):
-    host_sim0._variant = "opt"
-if isinstance(host_sim1, sim.Gem5Sim):
-    host_sim1._variant = "opt"
 
 instantiation = inst_helpers.simple_instantiation(simulation)
 fragment = inst.Fragment()
