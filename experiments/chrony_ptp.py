@@ -25,6 +25,7 @@ from simbricks.orchestration import system
 from simbricks.orchestration import simulation
 from simbricks.orchestration.helpers import instantiation as inst_helpers
 from simbricks.utils import base as utils_base
+import json
 
 
 """
@@ -144,7 +145,7 @@ for i in range(num_ns3_dummy_host_pairs):
 """
 Simulator Choice
 """
-sim = simulation.Simulation(name="Columbo-Sim", system=syst)
+sim = simulation.Simulation(name="chrony_ptp", system=syst)
 
 # create simulators for full hosts
 for host in full_hosts:
@@ -158,14 +159,19 @@ for nic in nics:
     nic_inst = sim_nic(simulation=sim)
     nic_inst.add(nic)
 
+host0_s = sim.find_sim(host0)
+host0_s.log_file = "host0_ptp.log"
+host1_s = sim.find_sim(host1)
+host1_s.log_file = "host1_ptp.log"
+
 # mac address + log file nic0 / nic1
 nic0_s = sim.find_sim(nic0)
 nic0_s.mac = "00:1A:2B:3C:4D:5E"
-nic0_s.log_file = "nic0.log"
+nic0_s.log_file = "nic0_ptp.log"
 
 nic1_s = sim.find_sim(nic1)
 nic1_s.mac = "00:1A:2B:3C:4D:5F"
-nic1_s.log_file = "nic1.log"
+nic1_s.log_file = "nic1_ptp.log"
 
 # create network simulator
 net_inst = simulation.NS3Net(sim)
@@ -198,3 +204,9 @@ Instantiation
 instance = inst_helpers.simple_instantiation(sim)
 instantiations.append(instance)
 
+with open('sim_topology_ptp.json', 'w+') as outf:
+    topo = {}
+    topo['system'] = syst.toJSON()
+    topo['simulation'] = sim.toJSON()
+    topo_str = json.dumps(topo, indent=4)
+    outf.write(topo_str)
