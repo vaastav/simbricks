@@ -372,7 +372,7 @@ echo "for i in {{0..60}}" >> sys-query.sh
 echo "do" >> sys-query.sh
 echo "    date +%s%N" >> sys-query.sh
 echo "    m5 dumpstats" >> sys-query.sh
-echo "    sleep 60" >> sys-query.sh
+echo "    sleep 1" >> sys-query.sh
 echo "done" >> sys-query.sh
 chmod +x sys-query.sh
 """]
@@ -429,7 +429,7 @@ echo "for i in {{0..60}}" >> sys-query.sh
 echo "do" >> sys-query.sh
 echo "  date +%s%N" >> sys-query.sh
 echo "  m5 dumpstats" >> sys-query.sh
-echo "  sleep 60" >> sys-query.sh
+echo "  sleep 1" >> sys-query.sh
 echo "done" >> sys-query.sh
 chmod +x sys-query.sh
 """     
@@ -439,7 +439,7 @@ chmod +x sys-query.sh
 echo "for i in {{0..60}}" >> chrony-query.sh
 echo "do" >> chrony-query.sh
 echo "  chronyc -n tracking" >> chrony-query.sh
-echo "  sleep 60" >> chrony-query.sh
+echo "  sleep 1" >> chrony-query.sh
 echo "done" >> chrony-query.sh
 chmod +x chrony-query.sh
 """     
@@ -461,17 +461,7 @@ chmod +x chrony-query.sh
         return m
 
     def run_cmds(self, inst: inst_base.Instantiation) -> list[str]:
-        return [
-            # initially set phc to system time, so we have a sane starting
-            # point
-            f'phc_ctl /dev/ptp0 set &',
-            f'ptp4l -m -q -f /etc/linuxptp/ptp4l.conf -i eth0 &',
-            f"""
-./sys-query.sh &
-pid=$!
-wait $pid
-"""
-        ]
+        return [f'chronyd -4 -d -x -f chrony.conf -L {self.loglevel}']
 
 class ChronyClient(BaseLinuxApplication):
     def __init__(self, h: sys_host.LinuxHost) -> None:
@@ -517,7 +507,7 @@ echo "for i in {{0..60}}" >> sys-query.sh
 echo "do" >> sys-query.sh
 echo "  date +%s%N" >> sys-query.sh
 echo "  m5 dumpstats" >> sys-query.sh
-echo "  sleep 60" >> sys-query.sh
+echo "  sleep 1" >> sys-query.sh
 echo "done" >> sys-query.sh
 chmod +x sys-query.sh
 """
@@ -527,7 +517,7 @@ chmod +x sys-query.sh
 echo "for i in {{0..60}}" >> chrony-query.sh
 echo "do" >> chrony-query.sh
 echo "  chronyc -n tracking" >> chrony-query.sh
-echo "  sleep 60" >> chrony-query.sh
+echo "  sleep 1" >> chrony-query.sh
 echo "done" >> chrony-query.sh
 chmod +x chrony-query.sh
 """
