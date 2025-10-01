@@ -45,7 +45,7 @@ sim_host = simulation.Gem5Sim
 
 num_ns3_dummy_host_pairs = 1
 
-synchronized = False
+synchronized = True
 
 full_hosts = []
 nics = []
@@ -54,8 +54,8 @@ ns3_hosts = []
 """
 System Specification
 """
-syst = system.System(name="Columbo-Sys")
-distro_disk_image = system.DistroDiskImage(syst, "base")
+syst = system.System(name="Columbo-ptp")
+distro_disk_image = system.DistroDiskImage(syst, "timesync")
 
 # Client host
 host0 = sys_host(syst)
@@ -87,6 +87,7 @@ client_app = system.ChronyClient(h=host0)
 client_app.ntp_server = '10.0.0.2'
 client_app.nic_timestamping = True
 client_app.ptp = True
+client_app.wait = True
 host0.add_app(client_app)
 
 # Server app
@@ -163,6 +164,8 @@ host0_s = sim.find_sim(host0)
 host0_s.log_file = "host0_ptp.log"
 host1_s = sim.find_sim(host1)
 host1_s.log_file = "host1_ptp.log"
+host0_s.debug_start = int(59e12)
+host1_s.debug_start = int(59e12)
 
 # mac address + log file nic0 / nic1
 nic0_s = sim.find_sim(nic0)

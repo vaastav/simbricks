@@ -42,7 +42,7 @@ sys_host = system.I40ELinuxHost
 sim_nic = simulation.I40eNicSim
 sim_host = simulation.Gem5Sim
 
-num_ns3_dummy_host_pairs = 1
+num_ns3_dummy_host_pairs = 0
 
 synchronized = True
 
@@ -53,7 +53,7 @@ ns3_hosts = []
 """
 System Specification
 """
-syst = system.System(name="Columbo-ntp")
+syst = system.System(name="Columbo-ntp-nobg")
 distro_disk_image = system.DistroDiskImage(syst, "timesync")
 
 # Client host
@@ -144,7 +144,7 @@ for i in range(num_ns3_dummy_host_pairs):
 """
 Simulator Choice
 """
-sim = simulation.Simulation(name="chrony_ntp", system=syst)
+sim = simulation.Simulation(name="chrony_ntp_nobg", system=syst)
 
 # create simulators for full hosts
 for host in full_hosts:
@@ -168,11 +168,11 @@ host1_s.debug_start = int(59e12)
 # mac address + log file nic0 / nic1
 nic0_s = sim.find_sim(nic0)
 nic0_s.mac = "00:1A:2B:3C:4D:5E"
-nic0_s.log_file = "nic0_ntp.log"
+nic0_s.log_file = "nic0_ntp_nobg.log"
 
 nic1_s = sim.find_sim(nic1)
 nic1_s.mac = "00:1A:2B:3C:4D:5F"
-nic1_s.log_file = "nic1_ntp.log"
+nic1_s.log_file = "nic1_ntp_nobg.log"
 
 # create network simulator
 net_inst = simulation.NS3Net(sim)

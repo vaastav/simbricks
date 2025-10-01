@@ -138,24 +138,31 @@ volatile union SimbricksProtoNetMsg *Runner::D2NAlloc() {
   return msg;
 }
 
+std::string DMAOp::str() {
+  if (write_) {
+    return "write";
+  }
+  return "read";
+}
+
 void Runner::IssueDma(DMAOp &op) {
   if (dma_pending_ < DMA_MAX_PENDING) {
     // can directly issue
 #ifdef DEBUG_NICBM
     sim_log::LogInfo(
         log_,
-        "main_time = %lu: nicbm: issuing dma op %p addr 0x%lx len %zu pending "
+        "main_time = %lu: nicbm: issuing dma op %s addr 0x%lx len %zu pending "
         "%zu\n",
-        main_time_, &op, op.dma_addr_, op.len_, dma_pending_);
+        main_time_, op.str().c_str(), op.dma_addr_, op.len_, dma_pending_);
 #endif
     DmaDo(op);
   } else {
 #ifdef DEBUG_NICBM
     sim_log::LogInfo(
         log_,
-        "main_time = %lu: nicbm: enqueuing dma op %p addr 0x%lx len %zu pending"
+        "main_time = %lu: nicbm: enqueuing dma op %s addr 0x%lx len %zu pending"
         " %zu\n",
-        main_time_, &op, op.dma_addr_, op.len_, dma_pending_);
+        main_time_, op.str().c_str(), op.dma_addr_, op.len_, dma_pending_);
 #endif
     dma_queue_.push_back(&op);
   }
@@ -167,6 +174,14 @@ void Runner::DmaTrigger() {
 
   DMAOp *op = dma_queue_.front();
   dma_queue_.pop_front();
+#ifdef DEBUG_NICBM
+  sim_log::LogInfo(
+    log_,
+    "main_time = %lu: nicbm: dequeueing dma op %s addr 0x%lx len %zu pending"
+    " %zu\n",
+    main_time_, op->str().c_str(), op->dma_addr_, op->len_, dma_pending_
+  );
+#endif
 
   DmaDo(*op);
 }
@@ -180,9 +195,9 @@ void Runner::DmaDo(DMAOp &op) {
 #ifdef DEBUG_NICBM
   sim_log::LogInfo(
       log_,
-      "main_time = %lu: nicbm: executing dma op %p addr 0x%lx len %zu pending "
+      "main_time = %lu: nicbm: executing dma op %s addr 0x%lx len %zu pending "
       "%zu\n",
-      main_time_, &op, op.dma_addr_, op.len_, dma_pending_);
+      main_time_, op.str().c_str(), op.dma_addr_, op.len_, dma_pending_);
 #endif
 
   size_t maxlen = SimbricksBaseIfOutMsgLen(&nicif_.pcie.base);
@@ -354,8 +369,8 @@ void Runner::H2DReadcomp(volatile struct SimbricksProtoPcieH2DReadcomp *rc) {
 #ifdef DEBUG_NICBM
   sim_log::LogInfo(
       log_,
-      "main_time = %lu: nicbm: completed dma read op %p addr 0x%lx len %zu\n",
-      main_time_, op, op->dma_addr_, op->len_);
+      "main_time = %lu: nicbm: completed dma read op %s addr 0x%lx len %zu\n",
+      main_time_, op->str().c_str(), op->dma_addr_, op->len_);
 #endif
 
   memcpy(op->data_, (void *)rc->data, op->len_);
@@ -371,8 +386,8 @@ void Runner::H2DWritecomp(volatile struct SimbricksProtoPcieH2DWritecomp *wc) {
 #ifdef DEBUG_NICBM
   sim_log::LogInfo(
       log_,
-      "main_time = %lu: nicbm: completed dma write op %p addr 0x%lx len %zu\n",
-      main_time_, op, op->dma_addr_, op->len_);
+      "main_time = %lu: nicbm: completed dma write op %s addr 0x%lx len %zu\n",
+      main_time_, op->str().c_str(), op->dma_addr_, op->len_);
 #endif
 
   dev_.DmaComplete(*op);

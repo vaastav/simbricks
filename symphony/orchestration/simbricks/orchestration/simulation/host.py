@@ -107,6 +107,8 @@ class Gem5Sim(HostSim):
         self._variant: str = "fast"
         self._sys_clock: str = "1GHz"  # TODO: move to system module
         self.log_file : str | None = None
+        self.debug_start : int = 0
+        self.debug_exec : bool = False
 
     def supports_checkpointing(self) -> bool:
         return True
@@ -129,6 +131,8 @@ class Gem5Sim(HostSim):
         json_obj["_variant"] = self._variant
         json_obj["_sys_clock"] = self._sys_clock
         json_obj["log_file"] = self.log_file
+        json_obj["debug_start"] = self.debug_start
+        json_obj["debug_exec"] = self.debug_exec
         return json_obj
 
     @classmethod
@@ -145,6 +149,8 @@ class Gem5Sim(HostSim):
         instance._variant = utils_base.get_json_attr_top(json_obj, "_variant")
         instance._sys_clock = utils_base.get_json_attr_top(json_obj, "_sys_clock")
         instance.log_file = utils_base.get_json_attr_top(json_obj, "log_file")
+        instance.debug_start = utils_base.get_json_attr_top(json_obj, "debug_start")
+        instance.debug_exec = utils_base.get_json_attr_top(json_obj, "debug_exec")
         return instance
 
     async def copy_disk_image(
@@ -174,8 +180,11 @@ class Gem5Sim(HostSim):
 
         cmd = f"{inst.env.repo_base(f'{self._executable}.{self._variant}')} --outdir={inst.env.get_simulator_output_dir(sim=self)} "
         cmd += " ".join(self.extra_main_args)
+        debug_flags = "SimBricksAll,ColumboSyscall,Faults,EthernetAll,PciDevice,PciHost"
+        if self.debug_exec:
+            debug_flags += ",ExecEnable,ExecOpClass,ExecThread,ExecEffAddr,ExecResult,ExecMicro,ExecMacro,ExecUser,ExecKernel,ExecOpClass,ExecRegDelta,ExecFaulting,ExecAsid,ExecFlags,ExecCPSeq,ExecFaulting,ExecFetchSeq"
         if self.log_file is not None:
-            cmd += f" --debug-file={self.log_file} --debug-flags=SimBricksAll,SyscallAll,EthernetAll,PciDevice,PciHost"
+            cmd += f" --debug-file={self.log_file} --debug-flags={debug_flags} --debug-start={self.debug_start}"
         cmd += (
             f" {inst.env.repo_base('sims/external/gem5/configs/simbricks/simbricks.py')} --caches --l2cache "
             "--l1d_size=32kB --l1i_size=32kB --l2_size=32MB "

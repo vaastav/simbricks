@@ -48,6 +48,7 @@ class DMAOp {
   uint64_t dma_addr_;
   size_t len_;
   void *data_;
+  std::string str();
 };
 
 class TimedEvent {

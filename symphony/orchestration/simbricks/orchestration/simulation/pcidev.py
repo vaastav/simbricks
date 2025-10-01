@@ -171,14 +171,20 @@ class I40eNicSim(NICSim):
             executable="sims/nic/i40e_bm/i40e_bm",
         )
         self.name = f"NICSim-{self._id}"
+        self.mac = None
+        self.log_file = None
 
     def toJSON(self) -> dict:
         json_obj = super().toJSON()
+        json_obj["mac"] = self.mac
+        json_obj["log_file"] = self.log_file
         return json_obj
 
     @classmethod
     def fromJSON(cls, simulation: sim_base.Simulation, json_obj: dict) -> tpe.Self:
         instance = super().fromJSON(simulation, json_obj)
+        instance.mac = utils_base.get_json_attr_top(json_obj, "mac")
+        instance.log_file = utils_base.get_json_attr_top(json_obj, "log_file")
         return instance
 
     def add(self, nic: sys_nic.IntelI40eNIC):

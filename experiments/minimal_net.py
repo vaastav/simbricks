@@ -9,8 +9,8 @@ import json
 synchronized = True
 
 nic_logging = True
-ns3_logging = False
-host_logging = False
+ns3_logging = True
+host_logging = True
 
 sys = system.System()
 
@@ -79,6 +79,10 @@ if nic_logging:
 if host_logging:
     host_sim0.log_file = "host0.log"
     host_sim1.log_file = "host1.log"
+    host_sim0.debug_start = 849339595000
+    host_sim1.debug_start = 84933959500
+    host_sim0.debug_exec = True
+    host_sim1.debug_exec = True
     if isinstance(host_sim0, sim.Gem5Sim):
         host_sim0._variant = "opt"
     if isinstance(host_sim1, sim.Gem5Sim):
