@@ -79,8 +79,8 @@ if nic_logging:
 if host_logging:
     host_sim0.log_file = "host0.log"
     host_sim1.log_file = "host1.log"
-    host_sim0.debug_start = 849339595000
-    host_sim1.debug_start = 84933959500
+    host_sim0.debug_start = int(85e10)
+    host_sim1.debug_start = int(85e10)
     host_sim0.debug_exec = True
     host_sim1.debug_exec = True
     if isinstance(host_sim0, sim.Gem5Sim):
