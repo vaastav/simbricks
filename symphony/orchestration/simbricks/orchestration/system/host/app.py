@@ -368,7 +368,7 @@ class PTPServer(BaseLinuxApplication):
 
         # m5 and sys time query
         cmds = cmds + [f"""
-echo "for i in {{0..60}}" >> sys-query.sh
+echo "for i in {{0..10}}" >> sys-query.sh
 echo "do" >> sys-query.sh
 echo "    date +%s%N" >> sys-query.sh
 echo "    m5 dumpstats" >> sys-query.sh
@@ -425,7 +425,7 @@ class ChronyServer(BaseLinuxApplication):
         cmds = super().prepare_pre_cp(inst)
         # m5 and sys time query
         cmds = cmds + [f"""
-echo "for i in {{0..60}}" >> sys-query.sh
+echo "for i in {{0..10}}" >> sys-query.sh
 echo "do" >> sys-query.sh
 echo "  date +%s%N" >> sys-query.sh
 echo "  m5 dumpstats" >> sys-query.sh
@@ -436,7 +436,7 @@ chmod +x sys-query.sh
         ]
         # chrony query
         cmds = cmds + [f"""
-echo "for i in {{0..60}}" >> chrony-query.sh
+echo "for i in {{0..10}}" >> chrony-query.sh
 echo "do" >> chrony-query.sh
 echo "  chronyc -n tracking" >> chrony-query.sh
 echo "  sleep 1" >> chrony-query.sh
@@ -503,7 +503,7 @@ class ChronyClient(BaseLinuxApplication):
 
         # m5 and sys time query
         cmds = cmds + [f"""
-echo "for i in {{0..60}}" >> sys-query.sh
+echo "for i in {{0..10}}" >> sys-query.sh
 echo "do" >> sys-query.sh
 echo "  date +%s%N" >> sys-query.sh
 echo "  m5 dumpstats" >> sys-query.sh
@@ -514,7 +514,7 @@ chmod +x sys-query.sh
         ]
         # chrony query
         cmds = cmds + [f"""
-echo "for i in {{0..60}}" >> chrony-query.sh
+echo "for i in {{0..10}}" >> chrony-query.sh
 echo "do" >> chrony-query.sh
 echo "  chronyc -n tracking" >> chrony-query.sh
 echo "  sleep 1" >> chrony-query.sh

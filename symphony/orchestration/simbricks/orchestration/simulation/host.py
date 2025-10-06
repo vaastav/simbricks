@@ -182,7 +182,7 @@ class Gem5Sim(HostSim):
         cmd += " ".join(self.extra_main_args)
         debug_flags = "SimBricksAll,ColumboSyscall,Faults,EthernetAll,PciDevice,PciHost"
         if self.debug_exec:
-            debug_flags += ",ExecEnable,ExecOpClass,ExecThread,ExecEffAddr,ExecResult,ExecMicro,ExecMacro,ExecUser,ExecKernel,ExecOpClass,ExecRegDelta,ExecFaulting,ExecAsid,ExecFlags,ExecCPSeq,ExecFaulting,ExecFetchSeq"
+            debug_flags += ",ExecEnable,ExecOpClass,ExecThread,ExecEffAddr,ExecResult,ExecMicro,ExecMacro,ExecUser,ExecKernel,ExecOpClass,ExecRegDelta,ExecFaulting,ExecAsid,ExecFlags,ExecCPSeq,ExecFaulting,ExecFetchSeq,ExecSymbol"
         if self.log_file is not None:
             cmd += f" --debug-file={self.log_file} --debug-flags={debug_flags} --debug-start={self.debug_start}"
         cmd += (

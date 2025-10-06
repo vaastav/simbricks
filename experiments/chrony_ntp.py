@@ -26,6 +26,7 @@ from simbricks.orchestration import simulation
 from simbricks.orchestration.helpers import instantiation as inst_helpers
 from simbricks.utils import base as utils_base
 import json
+import sys
 
 """
 This list is used and expected
@@ -42,7 +43,11 @@ sys_host = system.I40ELinuxHost
 sim_nic = simulation.I40eNicSim
 sim_host = simulation.Gem5Sim
 
-num_ns3_dummy_host_pairs = 1
+num_ns3_dummy_host_pairs = 1000
+link_rate = 1000  # in Mbps
+link_latency = 10  # in ms
+
+print(f"Link Rate: {link_rate}, Link Latency: {link_latency}, NS3_Dummies: {num_ns3_dummy_host_pairs}")
 
 synchronized = True
 
@@ -104,6 +109,11 @@ switch_1.add_if(eth_1)
 eth_2 = system.EthInterface(switch_2)
 switch_2.add_if(eth_2)
 switch_to_switch_chan = system.EthChannel(eth_1, eth_2)
+# adjust channel options
+switch_to_switch_chan.set_latency(link_latency, utils_base.Time.Milliseconds)
+# NOTE: these are NS3 specific parameter
+switch_to_switch_chan.parameters = {"data_rate": f"{link_rate}Mbps"}
+
 
 
 # create ns3 dummy hosts system spec
@@ -144,7 +154,7 @@ for i in range(num_ns3_dummy_host_pairs):
 """
 Simulator Choice
 """
-sim = simulation.Simulation(name="chrony_ntp", system=syst)
+sim = simulation.Simulation(name=f"chrony_ntp_{link_rate}_{link_latency}_{num_ns3_dummy_host_pairs}", system=syst)
 
 # create simulators for full hosts
 for host in full_hosts:
@@ -205,7 +215,7 @@ Instantiation
 instance = inst_helpers.simple_instantiation(sim)
 instantiations.append(instance)
 
-with open('sim_topology_ptp.json', 'w+') as outf:
+with open('sim_topology_ntp.json', 'w+') as outf:
     topo = {}
     topo['system'] = syst.toJSON()
     topo['simulation'] = sim.toJSON()
